@@ -1,1 +1,4 @@
 Data/
+.RData
+.Rhistory
+*.tex

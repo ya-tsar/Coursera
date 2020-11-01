@@ -3,8 +3,8 @@ title: "Storm data analysis"
 author: "Yaroslav Tsaregorodtsev"
 date: "3/31/2020"
 output:
-  pdf_document: default
   html_document: default
+  pdf_document: default
 ---
 
 
@@ -36,23 +36,22 @@ temperatures or precipitation that occur in connection with another event.
 
 ```{r, loading data, message = FALSE}
 #Loadind Storm data
-data_path <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
-
-setAs("character","myDate", function(from) as.Date(from, format="%m/%d/%Y %H:%M:%S"))
-
-data <- read.table(data_path,                 
-                   colClasses = c("BGN_DATE" = "myDate",                                  
-                                  "WFO" = "character",
-                                  "END_TIME" = "character",
-                                  "BGN_AZI" = "character",
-                                  "BGN_LOCATI" = "character",
-                                  "END_DATE" = "character",
-                                  "CROPDMGEXP" = "character",
-                                  "ZONENAMES" = "character",
-                                  "REMARKS" = "character",
-                                  "END_LOCATI" = "character",
-                                  "END_AZI" = "character",
-                                  "STATEOFFIC" = "character")) 
+data_path <- list.files(pattern = "repdata_data_StormData.csv",
+                        recursive = TRUE, ignore.case = TRUE)
+data <- read_csv(data_path, 
+                 col_types = cols(BGN_DATE = col_date(format = "%m/%d/%Y %H:%M:%S"),
+                                  WFO = col_character(),
+                                  END_TIME = col_character(),
+                                  BGN_AZI = col_character(),
+                                  BGN_LOCATI = col_character(),
+                                  END_DATE = col_character(),
+                                  CROPDMGEXP = col_character(),
+                                  ZONENAMES = col_character(),
+                                  REMARKS = col_character(),
+                                  END_LOCATI = col_character(),
+                                  END_AZI = col_character(),
+                                  STATEOFFIC = col_character())) %>%
+  data.table()
 
 #Loadind event table
 event_table_path <- list.files(pattern = "event_table", 
