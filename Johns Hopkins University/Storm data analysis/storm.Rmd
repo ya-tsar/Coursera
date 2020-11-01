@@ -1,0 +1,246 @@
+---
+title: "Storm data analysis"
+author: "Yaroslav Tsaregorodtsev"
+date: "3/31/2020"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+
+## Librarys loading
+```{r, librares, message = FALSE}
+library(dplyr)
+library(data.table)
+library(readr)
+library(ggplot2)
+library(stringr)
+library(stringi)
+```
+## Storm Data description
+
+Storm Data is an official publication of the National Oceanic
+and Atmospheric Administration (NOAA) which documents:
+
+a. The occurrence of storms and other significant weather phenomena having
+sufficient intensity to cause loss of life, injuries, significant property damage, and/or
+disruption to commerce;
+
+b. Rare, unusual, weather phenomena that generate media attention, such as snow
+flurries in South Florida or the San Diego coastal area; and
+
+c. Other significant meteorological events, such as record maximum or minimum
+temperatures or precipitation that occur in connection with another event. 
+
+## Data Processing
+
+```{r, loading data, message = FALSE}
+#Loadind Storm data
+data_path <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
+
+setAs("character","myDate", function(from) as.Date(from, format="%m/%d/%Y %H:%M:%S"))
+
+data <- read.table(data_path,                 
+                   colClasses = c("BGN_DATE" = "myDate",                                  
+                                  "WFO" = "character",
+                                  "END_TIME" = "character",
+                                  "BGN_AZI" = "character",
+                                  "BGN_LOCATI" = "character",
+                                  "END_DATE" = "character",
+                                  "CROPDMGEXP" = "character",
+                                  "ZONENAMES" = "character",
+                                  "REMARKS" = "character",
+                                  "END_LOCATI" = "character",
+                                  "END_AZI" = "character",
+                                  "STATEOFFIC" = "character")) 
+
+#Loadind event table
+event_table_path <- list.files(pattern = "event_table", 
+                               recursive = TRUE, ignore.case = TRUE)
+event_table <- read_delim(event_table_path, delim = ";") %>%
+  data.table()
+
+#Loadind State list (50 States and District of Columbia)
+state_list_path <- list.files(pattern = "State_list",                                
+                              recursive = TRUE, ignore.case = TRUE)
+state_list <- read_delim(state_list_path, delim = ";") %>%
+  data.table()
+
+#Grouping data by main event types and classification for the 3 designators: County/Parish; Zone; and Marine
+storm_data <- data %>%
+  mutate(Event_Name = case_when(str_detect(EVTYPE %>% toupper(), "ASTRONOMICAL LOW TIDE") ~ "ASTRONOMICAL LOW TIDE",
+                                str_detect(EVTYPE %>% toupper(), "AVALANCHE") ~ "AVALANCHE",
+                                str_detect(EVTYPE %>% toupper(), "BLIZZARD") ~ "BLIZZARD",
+                                str_detect(EVTYPE %>% toupper(), "COASTAL FLOOD") ~ "COASTAL FLOOD", 
+                                str_detect(EVTYPE %>% toupper(), "COLD/WIND CHILL") ~ "COLD/WIND CHILL", 
+                                str_detect(EVTYPE %>% toupper(), "DEBRIS FLOW") ~ "DEBRIS FLOW", 
+                                str_detect(EVTYPE %>% toupper(), "DENSE FOG") ~ "DENSE FOG",
+                                str_detect(EVTYPE %>% toupper(), "DENSE SMOKE") ~ "DENSE SMOKE",
+                                str_detect(EVTYPE %>% toupper(), "DROUGHT") ~ "DROUGHT",
+                                str_detect(EVTYPE %>% toupper(), "DUST DEVIL") ~ "DUST DEVIL",
+                                str_detect(EVTYPE %>% toupper(), "DUST STORM") ~ "DUST STORM",
+                                str_detect(EVTYPE %>% toupper(), "EXCESSIVE HEAT") ~ "EXCESSIVE HEAT",
+                                str_detect(EVTYPE %>% toupper(), "EXTREME COLD/WIND CHILL") ~ "EXTREME COLD/WIND CHILL",
+                                str_detect(EVTYPE %>% toupper(), "FLASH FLOOD") ~ "FLASH FLOOD",
+                                str_detect(EVTYPE %>% toupper(), "FLOOD") ~ "FLOOD",
+                                str_detect(EVTYPE %>% toupper(), "FROST/FREEZE") ~ "FROST/FREEZE",
+                                str_detect(EVTYPE %>% toupper(), "FUNNEL CLOUD") ~ "FUNNEL CLOUD",
+                                str_detect(EVTYPE %>% toupper(), "FREEZING FOG") ~ "FREEZING FOG",
+                                str_detect(EVTYPE %>% toupper(), "HAIL") ~ "HAIL",
+                                str_detect(EVTYPE %>% toupper(), "HEAT") ~ "HEAT",
+                                str_detect(EVTYPE %>% toupper(), "HEAVY RAIN") ~ "HEAVY RAIN",
+                                str_detect(EVTYPE %>% toupper(), "HEAVY SNOW") ~ "HEAVY SNOW",
+                                str_detect(EVTYPE %>% toupper(), "HIGH SURF") ~ "HIGH SURF",                  
+                                str_detect(EVTYPE %>% toupper(), "HIGH WIND") ~ "HIGH WIND", 
+                                str_detect(EVTYPE %>% toupper(), "HURRICANE|TYPHOON") ~ "HURRICANE (TYPHOON)",
+                                str_detect(EVTYPE %>% toupper(), "ICE STORM") ~ "ICE STORM",
+                                str_detect(EVTYPE %>% toupper(), "LAKE-EFFECT SNOW") ~ "LAKE-EFFECT SNOW",
+                                str_detect(EVTYPE %>% toupper(), "LAKESHORE FLOOD") ~ "LAKESHORE FLOOD",
+                                str_detect(EVTYPE %>% toupper(), "LIGHTNING") ~ "LIGHTNING",
+                                str_detect(EVTYPE %>% toupper(), "MARINE HAIL") ~ "MARINE HAIL",
+                                str_detect(EVTYPE %>% toupper(), "MARINE HIGH WIND") ~ "MARINE HIGH WIND",
+                                str_detect(EVTYPE %>% toupper(), "MARINE STRONG WIND") ~ "MARINE STRONG WIND",
+                                str_detect(EVTYPE %>% toupper(), "MARINE THUNDERSTORM WIND") ~ "MARINE THUNDERSTORM WIND",                          
+                                str_detect(EVTYPE %>% toupper(), "RIP CURRENT") ~ "RIP CURRENT", 
+                                str_detect(EVTYPE %>% toupper(), "SEICHE") ~ "SEICHE", 
+                                str_detect(EVTYPE %>% toupper(), "SLEET") ~ "SLEET", 
+                                str_detect(EVTYPE %>% toupper(), "SNOW") ~ "SNOW",
+                                str_detect(EVTYPE %>% toupper(), "STORM SURGE/TIDE") ~ "STORM SURGE/TIDE", 
+                                str_detect(EVTYPE %>% toupper(), "STRONG WIND") ~ "STRONG WIND",
+                                str_detect(EVTYPE %>% toupper(), "THUNDERSTORM WIND|TSTM WIND|THUNDERSTORM") ~ "THUNDERSTORM WIND", 
+                                str_detect(EVTYPE %>% toupper(), "TORNADO") ~ "TORNADO",
+                                str_detect(EVTYPE %>% toupper(), "TROPICAL DEPRESSION") ~ "TROPICAL DEPRESSION",
+                                str_detect(EVTYPE %>% toupper(), "TROPICAL STORM") ~ "TROPICAL STORM",
+                                str_detect(EVTYPE %>% toupper(), "TSUNAMI") ~ "TSUNAMI",
+                                str_detect(EVTYPE %>% toupper(), "VOLCANIC ASH") ~ "VOLCANIC ASH",
+                                str_detect(EVTYPE %>% toupper(), "WATERSPOUT") ~ "WATERSPOUT",
+                                str_detect(EVTYPE %>% toupper(), "WILDFIRE") ~ "WILDFIRE",
+                                str_detect(EVTYPE %>% toupper(), "WINTER STORM") ~ "WINTER STORM",
+                                str_detect(EVTYPE %>% toupper(), "WINTER WEATHER") ~ "WINTER WEATHER",                           
+                                TRUE ~ "Other")) %>%
+  merge(event_table, by = "Event_Name", all.x = TRUE) %>%
+  merge(state_list, by.x = "STATE", by.y = "Code", all.x = TRUE)
+```
+## Analysis
+
+Storm Data ware considered. All state codes converted to state names (states that have a different code from code 50 states + District of Columbia receive empty name). Also, all weather events ware grouped into general types from Storm Data Event Table (see https://d396qusza40orc.cloudfront.net/repdata%2Fpeer2_doc%2Fpd01016005curr.pdf, section 2.1.1) and there are three designators: County/Parish; Zone; and Marine.
+
+Analysis consists of 3 parts:
+
+1. Crop damage and fatalities for all time of observed data and all states.
+
+2. Total level of Crop damage and fatalities for all states.
+
+3. Crop damage and fatalities for all events and designators.
+
+## Calculating
+```{r, calculating}
+##calculating total Crop Damage and Fatality for the all States
+
+
+ damage_state_year <- storm_data %>%
+   group_by(BGN_DATE, State, Event_Name) %>%
+   summarise(Crop_damage = sum(CROPDMG),
+             Fatality = sum(FATALITIES)) %>%
+  arrange(desc(Crop_damage))
+ summary(damage_state_year)
+ head(damage_state_year, 10)
+ 
+ damage_state <- storm_data %>%
+   group_by(State, Event_Name) %>%
+   summarise(Crop_damage = sum(CROPDMG),
+             Fatality = sum(FATALITIES)) %>%
+   arrange(desc(Crop_damage))
+ summary(damage_state)
+ head(damage_state, 10)
+ 
+fat_state_year <- storm_data %>%
+   group_by(BGN_DATE, State, Event_Name) %>%
+   summarise(Crop_damage = sum(CROPDMG),
+             Fatality = sum(FATALITIES)) %>%
+   arrange(desc(Fatality))
+ summary(fat_state_year)
+ head(fat_state_year, 10)
+
+ fat_state <- storm_data %>%
+   group_by(State, Event_Name) %>%
+   summarise(Crop_damage = sum(CROPDMG),
+             Fatality = sum(FATALITIES)) %>%
+   arrange(desc(Fatality))
+ summary(fat_state)
+ head(fat_state, 10) 
+
+ damage_fat_event_year <- storm_data %>%
+   group_by(BGN_DATE, Event_Name) %>%
+   summarise(Crop_damage = sum(CROPDMG),
+             Fatality = sum(FATALITIES)) %>%
+   filter(Crop_damage > 0, Fatality > 0)
+ 
+ damage_event <- storm_data %>%
+   group_by(Event_Name) %>%
+   summarise(Crop_damage = sum(CROPDMG),
+             Fatality = sum(FATALITIES)) %>%
+   arrange(desc(Crop_damage))
+ head(damage_event, 10) 
+ 
+ fat_event <- storm_data %>%
+   group_by(Event_Name) %>%
+   summarise(Crop_damage = sum(CROPDMG),
+             Fatality = sum(FATALITIES)) %>%
+   arrange(desc(Fatality))
+ head(fat_event, 10) 
+ 
+ 
+ damage_designator_year <- storm_data %>%
+   mutate(Year = year(BGN_DATE)) %>%
+   group_by(Year, Designator) %>%
+   summarise(Crop_damage = sum(CROPDMG),
+             Fatality = sum(FATALITIES)) %>%
+   arrange(desc(Crop_damage))
+ head(damage_designator_year, 10) 
+ 
+ fat_designator_year <- storm_data %>%
+   mutate(Year = year(BGN_DATE)) %>%
+   group_by(Year, Designator) %>% 
+   summarise(Crop_damage = sum(CROPDMG),
+             Fatality = sum(FATALITIES)) %>%
+   arrange(desc(Fatality))
+ head(fat_designator_year, 10) 
+ 
+ damage_fat_designator <- storm_data %>%
+   mutate(Year = year(BGN_DATE)) %>%
+   group_by(Year, Designator) %>%
+   summarise(Crop_damage = sum(CROPDMG),
+             Fatality = sum(FATALITIES)) 
+ head(damage_fat_designator) 
+```
+
+## Plots
+
+You can also embed plots, for example:
+
+```{r}
+g <- ggplot(damage_state_year, aes(BGN_DATE, Fatality, group = as.factor(State),  color = as.factor(State)))
+g + geom_line() + xlab("Date") + ggtitle("Fig. 1 Fatality level for all states")
+
+d <- ggplot(fat_state_year, aes(BGN_DATE, Crop_damage, group = as.factor(State),  color = as.factor(State)))
+d + geom_line() + xlab("Date") + ggtitle("Fig. 2 Crop damage for all states")
+
+e <- ggplot(damage_fat_event_year, aes(BGN_DATE, Crop_damage, group = as.factor(Event_Name),  color = as.factor(Event_Name)))
+e + geom_line() + xlab("Date") + ggtitle("Fig. 3 Crop damage for all events")
+
+f <- ggplot(damage_designator_year, aes(Year, Crop_damage, group = as.factor(Designator),  color = as.factor(Designator)))
+f + geom_line() + xlab("Year") + ggtitle("Fig. 4 Crop damage for all Designator")
+
+h <- ggplot(fat_designator_year, aes(Year, Fatality, group = as.factor(Designator),  color = as.factor(Designator)))
+h + geom_line() + geom_point() + geom_smooth() + xlab("Year") + ggtitle("Fig. 5 Fatality level for all Designator")
+```
+
+## Results
+
+1. Crop damage and fatalities for all time of observed data and all states.
+From the table 1 we can see that the event with a biggest Crop damage is TORNADO in Smithville, Mississippi April 27, 2011 (fig. 2). Nebraska state has a total biggest Crop damage from HAIL. The most mortatality event (HEAT) was happened in Chicago, Illinois in The 1995 (fig. 1)
+
+2. Total level of Crop damage and fatalities for all states. The state with a most mortality level is Illinois from HEAT and Nebraska has a maximum Crop damage from HAIL.
+
+3. Crop damage and fatalities for all events and designators. In the total level event with a maximum Crop damage is a HAIL and an event with a maximum mortalities is TORNADO. How we can see from fig. 4 and fig. 5 County/Parish have the biggest Crop damage, but an absolute maximum for Fatality is achieved for a Zone.
